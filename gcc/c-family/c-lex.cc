@@ -527,6 +527,9 @@ c_lex_with_flags (tree *value, location_t *loc, unsigned char *cpp_flags,
   switch (type)
     {
     case CPP_PADDING:
+      {
+	add_flags |= tok->flags & PREV_FALLTHROUGH;
+      }
       goto retry;
 
     case CPP_NAME:

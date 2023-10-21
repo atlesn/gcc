@@ -2363,7 +2363,7 @@ padding_token (cpp_reader *pfile, const cpp_token *source)
   /* Data in GCed data structures cannot be made const so far, so we
      need a cast here.  */
   result->val.source = (cpp_token *) source;
-  result->flags = 0;
+  result->flags = source->flags & PREV_FALLTHROUGH;
   return result;
 }
 
