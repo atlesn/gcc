@@ -260,6 +260,9 @@ struct lexer_state
      all directives apart from #define.  */
   unsigned char save_comments;
 
+  /* Flags applicable to tokens across macro directives or expansion */
+  unsigned char transient_token_flags;
+
   /* Nonzero if lexing __VA_ARGS__ and __VA_OPT__ are valid.  */
   unsigned char va_args_ok;
 

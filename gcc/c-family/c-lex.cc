@@ -288,25 +288,34 @@ cb_undef (cpp_reader *pfile, location_t loc, cpp_hashnode *node)
 			 (const char *) NODE_NAME (node));
 }
 
-/* Wrapper around cpp_get_token_with_location to stream the token to the
-   preprocessor so it can output it.  This is necessary with
+/* Wrapper around cpp_get_token_with_location_and_transient_flags to stream the
+   token to the preprocessor so it can output it.  This is necessary with
    flag_preprocess_only if we are obtaining tokens here instead of from the loop
    in c-ppoutput.cc, such as while processing a #pragma.  */
 
 static const cpp_token *
-get_token (cpp_reader *pfile, location_t *loc = nullptr)
+get_token (cpp_reader *pfile,
+	   location_t *loc = nullptr,
+	   unsigned char *cpp_flags = nullptr)
 {
+  unsigned char y;
+  if (!cpp_flags)
+    cpp_flags = &y;
   if (flag_preprocess_only)
     {
       location_t x;
       if (!loc)
 	loc = &x;
-      const auto tok = cpp_get_token_with_location (pfile, loc);
+      const auto tok = cpp_get_token_with_location_and_transient_flags (pfile,
+									loc,
+									cpp_flags);
       c_pp_stream_token (pfile, tok, *loc);
       return tok;
     }
   else
-    return cpp_get_token_with_location (pfile, loc);
+    return cpp_get_token_with_location_and_transient_flags (pfile,
+							    loc,
+							    cpp_flags);
 }
 
 /* Wrapper around cpp_get_token to skip CPP_PADDING tokens
@@ -516,14 +525,16 @@ c_lex_with_flags (tree *value, location_t *loc, unsigned char *cpp_flags,
   const cpp_token *tok;
   enum cpp_ttype type;
   unsigned char add_flags = 0;
+  unsigned char add_flags_tmp = 0;
   enum overflow_type overflow = OT_NONE;
 
   timevar_push (TV_CPP);
  retry:
-  tok = get_token (parse_in, loc);
+  tok = get_token (parse_in, loc, &add_flags_tmp);
   type = tok->type;
 
  retry_after_at:
+  add_flags |= add_flags_tmp;
   switch (type)
     {
     case CPP_PADDING:
@@ -594,7 +605,7 @@ c_lex_with_flags (tree *value, location_t *loc, unsigned char *cpp_flags,
 	  location_t newloc;
 
 	retry_at:
-	  tok = get_token (parse_in, &newloc);
+	  tok = get_token (parse_in, &newloc, &add_flags_tmp);
 	  type = tok->type;
 	  switch (type)
 	    {
@@ -736,21 +747,8 @@ c_lex_with_flags (tree *value, location_t *loc, unsigned char *cpp_flags,
     case CPP_MACRO_ARG:
       gcc_unreachable ();
 
-    /* CPP_COMMENT will appear when compiling with -C.  Ignore, except
-       when it is a FALLTHROUGH comment, in that case set
-       PREV_FALLTHROUGH flag on the next non-comment token.  */
+    /* CPP_COMMENT will appear when compiling with -C, ignore. */
     case CPP_COMMENT:
-      if (tok->flags & PREV_FALLTHROUGH)
-	{
-	  do
-	    {
-	      tok = get_token (parse_in, loc);
-	      type = tok->type;
-	    }
-	  while (type == CPP_PADDING || type == CPP_COMMENT);
-	  add_flags |= PREV_FALLTHROUGH;
-	  goto retry_after_at;
-	}
        goto retry;
 
     default:

@@ -3806,7 +3806,6 @@ _cpp_lex_direct (cpp_reader *pfile)
   cppchar_t c;
   cpp_buffer *buffer;
   const unsigned char *comment_start;
-  bool fallthrough_comment = false;
   cpp_token *result = pfile->cur_token++;
 
  fresh_line:
@@ -3846,7 +3845,7 @@ _cpp_lex_direct (cpp_reader *pfile)
 	  return result;
 	}
       if (buffer != pfile->buffer)
-	fallthrough_comment = false;
+	pfile->state.transient_token_flags &= ~(PREV_FALLTHROUGH);
       if (!pfile->keep_tokens)
 	{
 	  pfile->cur_run = &pfile->base_run;
@@ -3973,10 +3972,6 @@ _cpp_lex_direct (cpp_reader *pfile)
 	  result->flags |= NAMED_OP;
 	  result->type = (enum cpp_ttype) result->val.node.node->directive_index;
 	}
-
-      /* Signal FALLTHROUGH comment followed by another token.  */
-      if (fallthrough_comment)
-	result->flags |= PREV_FALLTHROUGH;
       break;
 
     case '\'':
@@ -4063,8 +4058,10 @@ _cpp_lex_direct (cpp_reader *pfile)
 	  break;
 	}
 
+      /* The fallthrough comment flag must be cleared after any macro
+	 expansions (in macro.cc). */
       if (fallthrough_comment_p (pfile, comment_start))
-	fallthrough_comment = true;
+	pfile->state.transient_token_flags |= PREV_FALLTHROUGH;
 
       if (pfile->cb.comment)
 	{
@@ -4078,9 +4075,6 @@ _cpp_lex_direct (cpp_reader *pfile)
 	  result->flags |= PREV_WHITE;
 	  goto update_tokens_line;
 	}
-
-      if (fallthrough_comment)
-	result->flags |= PREV_FALLTHROUGH;
 
       /* Save the comment as a token in its own right.  */
       save_comment (pfile, result, comment_start, c);

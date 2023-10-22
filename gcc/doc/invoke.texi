@@ -6985,9 +6985,10 @@ fallthrough comments, only attributes disable the warning.
 
 @end itemize
 
-The comment needs to be followed after optional whitespace and other comments
-by @code{case} or @code{default} keywords or by a user label that precedes some
-@code{case} or @code{default} label.
+The comment applies to the next @code{case} or @code{default} keyword, unless
+there are any open curly brackets or colons in between. A colon which is part of
+any user labels preceding the next @code{case} or @code{default} keyword is
+nevertheless allowed.
 
 @smallexample
 @group

@@ -984,7 +984,7 @@ paste_tokens (cpp_reader *pfile, location_t location,
       return false;
     }
 
-  lhs->flags |= (*plhs)->flags & (PREV_WHITE | PREV_FALLTHROUGH);
+  lhs->flags |= (*plhs)->flags & PREV_WHITE;
   *plhs = lhs;
   _cpp_pop_buffer (pfile);
   return true;
@@ -3135,6 +3135,19 @@ cpp_get_token_1 (cpp_reader *pfile, location_t *location)
 	}
     }
 
+    /* The PREV_FALLTHROUGH flag is set while lexing a comment
+       including what resembles an explicit switch fallthrough
+       annotation based on compile flags. We clear the flag if
+       code which is not a label is encountered, assuming any
+       following case label has by then been processed by the
+       caller, hence the fallthrough comment should not apply
+       to any more cases.  */
+    if (pfile->state.transient_token_flags & PREV_FALLTHROUGH)
+      if (result->type == CPP_COLON ||
+	  result->type == CPP_SEMICOLON ||
+	  result->type == CPP_OPEN_BRACE)
+	pfile->state.transient_token_flags &= ~(PREV_FALLTHROUGH);
+
   return result;
 }
 
@@ -3197,6 +3210,22 @@ const cpp_token *
 cpp_get_token_with_location (cpp_reader *pfile, location_t *loc)
 {
   return cpp_get_token_1 (pfile, loc);
+}
+
+/* Like cpp_get_token_with_location, but also get transient flags. The
+   flags are set and unset at different places while lexing. They are
+   used when a context starts before a macro directive or expansion and
+   is to apply to all or some tokens in between. The application of the
+   flags is at caller discretion. Only the flag PREV_FALLTHROUGH may be
+   returned.  */
+const cpp_token *
+cpp_get_token_with_location_and_transient_flags (cpp_reader *pfile,
+						 location_t *loc,
+						 unsigned char *flags)
+{
+  const cpp_token *tok = cpp_get_token_1 (pfile, loc);
+  *flags = pfile->state.transient_token_flags;
+  return tok;
 }
 
 /* Returns true if we're expanding an object-like macro that was
