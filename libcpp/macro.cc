@@ -2954,8 +2954,25 @@ cpp_get_token_1 (cpp_reader *pfile, location_t *location)
 	  goto out;
 	}
 
-      if (pfile->state.in_directive && result->type == CPP_COMMENT)
-	continue;
+      /* Enable fallthrough transient flag when we encounter a
+	 fallthrough comment. When we later encounter a colon, a
+	 semicolon or an open brace, we remove the flag, assuming
+	 that the comment is misplaced or that the label for which
+	 the comment applies has been lexed.  */
+      if (result->type == CPP_COMMENT)
+	{
+	  if (result->flags & PREV_FALLTHROUGH)
+	    pfile->state.transient_token_flags |= PREV_FALLTHROUGH;
+	  if (pfile->state.in_directive || !pfile->state.save_comments)
+	    continue;
+	}
+      else if (pfile->state.transient_token_flags & PREV_FALLTHROUGH)
+	{
+	  if (result->type == CPP_COLON ||
+	      result->type == CPP_SEMICOLON ||
+	      result->type == CPP_OPEN_BRACE)
+	    pfile->state.transient_token_flags &= ~(PREV_FALLTHROUGH);
+	}
 
       if (result->type != CPP_NAME)
 	break;
@@ -3134,19 +3151,6 @@ cpp_get_token_1 (cpp_reader *pfile, location_t *location)
 	  result = tmp;
 	}
     }
-
-    /* The PREV_FALLTHROUGH flag is set while lexing a comment
-       including what resembles an explicit switch fallthrough
-       annotation based on compile flags. We clear the flag if
-       code which is not a label is encountered, assuming any
-       following case label has by then been processed by the
-       caller, hence the fallthrough comment should not apply
-       to any more cases.  */
-    if (pfile->state.transient_token_flags & PREV_FALLTHROUGH)
-      if (result->type == CPP_COLON ||
-	  result->type == CPP_SEMICOLON ||
-	  result->type == CPP_OPEN_BRACE)
-	pfile->state.transient_token_flags &= ~(PREV_FALLTHROUGH);
 
   return result;
 }

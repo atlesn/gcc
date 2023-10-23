@@ -6985,11 +6985,6 @@ fallthrough comments, only attributes disable the warning.
 
 @end itemize
 
-The comment applies to the next @code{case} or @code{default} keyword, unless
-there are any open curly brackets or colons in between. A colon which is part of
-any user labels preceding the next @code{case} or @code{default} keyword is
-nevertheless allowed.
-
 @smallexample
 @group
 switch (cond)
@@ -7002,6 +6997,16 @@ switch (cond)
   @}
 @end group
 @end smallexample
+
+The comment applies to the next @code{case} or @code{default} keyword. It
+must be placed after all statements and blocks in a switch case. There may
+not be any open curly brackets, colons or semi colons in between.
+
+Additional non-fallthrough comments are allowed after the comment. Also, any
+user labels preceding the next @code{case} or @code{default} keyword are allowed.
+
+If a fallthrough comment is inside a conditional directive, it takes effect or
+not depending on the condition e.g. on wheter or not the code is actually included.
 
 The @option{-Wimplicit-fallthrough=3} warning is enabled by @option{-Wextra}.
 

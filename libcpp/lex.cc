@@ -3844,8 +3844,6 @@ _cpp_lex_direct (cpp_reader *pfile)
 	    }
 	  return result;
 	}
-      if (buffer != pfile->buffer)
-	pfile->state.transient_token_flags &= ~(PREV_FALLTHROUGH);
       if (!pfile->keep_tokens)
 	{
 	  pfile->cur_run = &pfile->base_run;
@@ -4058,10 +4056,10 @@ _cpp_lex_direct (cpp_reader *pfile)
 	  break;
 	}
 
-      /* The fallthrough comment flag must be cleared after any macro
-	 expansions (in macro.cc). */
       if (fallthrough_comment_p (pfile, comment_start))
-	pfile->state.transient_token_flags |= PREV_FALLTHROUGH;
+	{
+	  result->flags |= PREV_FALLTHROUGH;
+	}
 
       if (pfile->cb.comment)
 	{
@@ -4070,7 +4068,9 @@ _cpp_lex_direct (cpp_reader *pfile)
 			     len + 1);
 	}
 
-      if (!pfile->state.save_comments)
+      /* Fallthrough comments must be saved to preserve the flag. They
+	 are dropped later.  */
+      if (!pfile->state.save_comments && !(result->flags & PREV_FALLTHROUGH))
 	{
 	  result->flags |= PREV_WHITE;
 	  goto update_tokens_line;

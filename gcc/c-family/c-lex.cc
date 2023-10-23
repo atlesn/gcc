@@ -525,16 +525,15 @@ c_lex_with_flags (tree *value, location_t *loc, unsigned char *cpp_flags,
   const cpp_token *tok;
   enum cpp_ttype type;
   unsigned char add_flags = 0;
-  unsigned char add_flags_tmp = 0;
+  unsigned char add_transient_flags = 0;
   enum overflow_type overflow = OT_NONE;
 
   timevar_push (TV_CPP);
  retry:
-  tok = get_token (parse_in, loc, &add_flags_tmp);
+  tok = get_token (parse_in, loc, &add_transient_flags);
   type = tok->type;
 
  retry_after_at:
-  add_flags |= add_flags_tmp;
   switch (type)
     {
     case CPP_PADDING:
@@ -605,7 +604,7 @@ c_lex_with_flags (tree *value, location_t *loc, unsigned char *cpp_flags,
 	  location_t newloc;
 
 	retry_at:
-	  tok = get_token (parse_in, &newloc, &add_flags_tmp);
+	  tok = get_token (parse_in, &newloc, &add_transient_flags);
 	  type = tok->type;
 	  switch (type)
 	    {
@@ -757,7 +756,7 @@ c_lex_with_flags (tree *value, location_t *loc, unsigned char *cpp_flags,
     }
 
   if (cpp_flags)
-    *cpp_flags = tok->flags | add_flags;
+    *cpp_flags = tok->flags | add_flags | add_transient_flags;
 
   timevar_pop (TV_CPP);
 
